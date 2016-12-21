@@ -1,12 +1,16 @@
 package de.greenrobot.eventperf;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Process;
 import android.text.Html;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
+
 import de.greenrobot.event.EventBus;
+import de.greenrobot.event.SubscribeTag;
 
 /**
  * This activity gets the information from the activity before, sets up the test and starts the test. After it watchs
@@ -26,6 +30,13 @@ public class TestRunnerActivity extends Activity {
         textViewResult = (TextView) findViewById(R.id.textViewResult);
         controlBus = new EventBus();
         controlBus.register(this);
+        EventBus.getDefault().register(this);
+        findViewById(R.id.nextActvity).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(TestRunnerActivity.this,TwoActivity.class));
+            }
+        });
     }
 
     @Override
@@ -59,6 +70,10 @@ public class TestRunnerActivity extends Activity {
             findViewById(R.id.buttonKillProcess).setVisibility(View.VISIBLE);
         }
     }
+    @SubscribeTag("hello")
+    public void onEventMainThread(TagEvent event) {
+        Log.e("Event","AAAAAAAAAAAAAAAAAAaaa");
+    }
 
     public void onClickCancel(View view) {
         // Cancel asap
@@ -79,5 +94,6 @@ public class TestRunnerActivity extends Activity {
         }
         controlBus.unregister(this);
         super.onDestroy();
+        EventBus.getDefault().unregister(this);
     }
 }

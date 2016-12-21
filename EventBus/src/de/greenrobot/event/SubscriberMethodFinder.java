@@ -117,8 +117,9 @@ class SubscriberMethodFinder {
                         String methodKey = methodKeyBuilder.toString();
                         Class methodClassOld = eventTypesFound.put(methodKey, methodClass);
                         if (methodClassOld == null || methodClassOld.isAssignableFrom(methodClass)) {
+
                             // Only add if not already found in a sub class
-                            subscriberMethods.add(new SubscriberMethod(method, threadMode, eventType));
+                            checkSubscribeTag(method,subscriberMethods,threadMode,eventType);
                         } else {
                             // Revert the put, old class is further down the class hierarchy
                             eventTypesFound.put(methodKey, methodClassOld);
@@ -130,6 +131,17 @@ class SubscriberMethodFinder {
                 }
             }
         }
+    }
+    private void checkSubscribeTag(Method method,List<SubscriberMethod> subscriberMethods,ThreadMode threadMode,Class<?> eventType){
+        SubscribeTag subscribeTag = method.getAnnotation(SubscribeTag.class);
+        String tag = null;
+        if(subscribeTag!=null){
+           tag = subscribeTag.value();
+        }
+        if(tag !=null && tag.trim().equals("")){
+            tag = null;
+        }
+        subscriberMethods.add(new SubscriberMethod(method, threadMode, eventType,tag));
     }
 
     private ThreadMode getThreadMode(Class<?> clazz, Method method, String methodName) {

@@ -46,6 +46,18 @@ final class HandlerPoster extends Handler {
             }
         }
     }
+    void enqueue(Subscription subscription, Object event,long delay) {
+        PendingPost pendingPost = PendingPost.obtainPendingPost(subscription, event);
+        synchronized (this) {
+            queue.enqueue(pendingPost);
+            if (!handlerActive) {
+                handlerActive = true;
+                if (!sendMessageDelayed(obtainMessage(),delay)) {
+                    throw new EventBusException("Could not send handler message");
+                }
+            }
+        }
+    }
 
     @Override
     public void handleMessage(Message msg) {

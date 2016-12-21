@@ -21,13 +21,15 @@ final class SubscriberMethod {
     final Method method;
     final ThreadMode threadMode;
     final Class<?> eventType;
+    final String tag;
     /** Used for efficient comparison */
     String methodString;
 
-    SubscriberMethod(Method method, ThreadMode threadMode, Class<?> eventType) {
+    SubscriberMethod(Method method, ThreadMode threadMode, Class<?> eventType,String tag) {
         this.method = method;
         this.threadMode = threadMode;
         this.eventType = eventType;
+        this.tag = tag;
     }
 
     @Override

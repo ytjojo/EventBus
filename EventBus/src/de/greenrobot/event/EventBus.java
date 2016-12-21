@@ -225,7 +225,7 @@ public class EventBus {
         if (stickyEvent != null) {
             // If the subscriber is trying to abort the event, it will fail (event is not tracked in posting state)
             // --> Strange corner case, which we don't take care of here.
-            postToSubscription(newSubscription, stickyEvent, Looper.getMainLooper() == Looper.myLooper());
+            postToSubscription(newSubscription, stickyEvent, Looper.getMainLooper() == Looper.myLooper(),0);
         }
     }
 
@@ -265,6 +265,22 @@ public class EventBus {
 
     /** Posts the given event to the event bus. */
     public void post(Object event) {
+       post(event,false);
+    }
+    /** Posts the given event to the event bus. */
+    public void post(Object event,long delay) {
+       post(null,event,false,delay);
+    }
+    /** Posts the given event to the event bus. */
+    public void post(Object event,boolean onlyLastCanReceive) {
+        post(null,event,onlyLastCanReceive,0);
+    }
+    /** Posts the given event to the event bus. */
+    public void post(String tag,Object event,long delay) {
+        post(tag,event,false,delay);
+    }
+    /** Posts the given event to the event bus. */
+    public void post(String tag,Object event,boolean onlyLastCanReceive,long delay) {
         PostingThreadState postingState = currentPostingThreadState.get();
         List<Object> eventQueue = postingState.eventQueue;
         eventQueue.add(event);
@@ -277,13 +293,17 @@ public class EventBus {
             }
             try {
                 while (!eventQueue.isEmpty()) {
-                    postSingleEvent(eventQueue.remove(0), postingState);
+                    postSingleEvent(tag,eventQueue.remove(0), postingState,onlyLastCanReceive,delay);
                 }
             } finally {
                 postingState.isPosting = false;
                 postingState.isMainThread = false;
             }
         }
+    }
+    /** Posts the given event to the event bus. */
+    public void post(String tag,Object event) {
+       post(tag,event,false,0);
     }
 
     /**
@@ -389,7 +409,7 @@ public class EventBus {
         return false;
     }
 
-    private void postSingleEvent(Object event, PostingThreadState postingState) throws Error {
+    private void postSingleEvent(String tag,Object event, PostingThreadState postingState,boolean onlyLastCanReceive,long delay) throws Error {
         Class<?> eventClass = event.getClass();
         boolean subscriptionFound = false;
         if (eventInheritance) {
@@ -397,10 +417,10 @@ public class EventBus {
             int countTypes = eventTypes.size();
             for (int h = 0; h < countTypes; h++) {
                 Class<?> clazz = eventTypes.get(h);
-                subscriptionFound |= postSingleEventForEventType(event, postingState, clazz);
+                subscriptionFound |= postSingleEventForEventType(tag,event, postingState, clazz,onlyLastCanReceive,delay);
             }
         } else {
-            subscriptionFound = postSingleEventForEventType(event, postingState, eventClass);
+            subscriptionFound = postSingleEventForEventType(tag,event, postingState, eventClass,onlyLastCanReceive,delay);
         }
         if (!subscriptionFound) {
             if (logNoSubscriberMessages) {
@@ -413,26 +433,44 @@ public class EventBus {
         }
     }
 
-    private boolean postSingleEventForEventType(Object event, PostingThreadState postingState, Class<?> eventClass) {
+    private boolean postSingleEventForEventType(String tag,Object event, PostingThreadState postingState, Class<?> eventClass,boolean onlyLastCanReceive,long delay) {
         CopyOnWriteArrayList<Subscription> subscriptions;
         synchronized (this) {
             subscriptions = subscriptionsByEventType.get(eventClass);
         }
         if (subscriptions != null && !subscriptions.isEmpty()) {
-            for (Subscription subscription : subscriptions) {
+            if(onlyLastCanReceive){
+                Subscription lastSubscription = subscriptions.get(subscriptions.size()-1);
                 postingState.event = event;
-                postingState.subscription = subscription;
-                boolean aborted = false;
+                postingState.subscription = lastSubscription;
                 try {
-                    postToSubscription(subscription, event, postingState.isMainThread);
-                    aborted = postingState.canceled;
+                    postToSubscription(lastSubscription, event, postingState.isMainThread,delay);
                 } finally {
                     postingState.event = null;
                     postingState.subscription = null;
                     postingState.canceled = false;
                 }
-                if (aborted) {
-                    break;
+            }else{
+                for (Subscription subscription : subscriptions) {
+                    if(tag != null){
+                        if(!tag.equals(subscription.subscriberMethod.tag)){
+                            continue;
+                        }
+                    }
+                    postingState.event = event;
+                    postingState.subscription = subscription;
+                    boolean aborted = false;
+                    try {
+                        postToSubscription(subscription, event, postingState.isMainThread,delay);
+                        aborted = postingState.canceled;
+                    } finally {
+                        postingState.event = null;
+                        postingState.subscription = null;
+                        postingState.canceled = false;
+                    }
+                    if (aborted) {
+                        break;
+                    }
                 }
             }
             return true;
@@ -440,17 +478,22 @@ public class EventBus {
         return false;
     }
 
-    private void postToSubscription(Subscription subscription, Object event, boolean isMainThread) {
+    private void postToSubscription(Subscription subscription, Object event, boolean isMainThread,long delay) {
         switch (subscription.subscriberMethod.threadMode) {
             case PostThread:
                 invokeSubscriber(subscription, event);
                 break;
             case MainThread:
-                if (isMainThread) {
-                    invokeSubscriber(subscription, event);
-                } else {
-                    mainThreadPoster.enqueue(subscription, event);
+                if(delay <= 0 ){
+                    if (isMainThread) {
+                        invokeSubscriber(subscription, event);
+                    } else {
+                        mainThreadPoster.enqueue(subscription, event);
+                    }
+                }else{
+                    mainThreadPoster.enqueue(subscription, event,delay);
                 }
+
                 break;
             case BackgroundThread:
                 if (isMainThread) {
