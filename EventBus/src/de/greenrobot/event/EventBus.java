@@ -273,14 +273,14 @@ public class EventBus {
     }
     /** Posts the given event to the event bus. */
     public void post(Object event,boolean onlyLastCanReceive) {
-        post(null,event,onlyLastCanReceive,0);
+        post(null,event,onlyLastCanReceive,-1);
     }
     /** Posts the given event to the event bus. */
     public void post(String tag,Object event,long delay) {
         post(tag,event,false,delay);
     }
     /** Posts the given event to the event bus. */
-    public void post(String tag,Object event,boolean onlyLastCanReceive,long delay) {
+    private void post(String tag,Object event,boolean onlyLastCanReceive,long delay) {
         PostingThreadState postingState = currentPostingThreadState.get();
         List<Object> eventQueue = postingState.eventQueue;
         eventQueue.add(event);
@@ -303,7 +303,7 @@ public class EventBus {
     }
     /** Posts the given event to the event bus. */
     public void post(String tag,Object event) {
-       post(tag,event,false,0);
+       post(tag,event,false,-1);
     }
 
     /**
@@ -335,11 +335,31 @@ public class EventBus {
      * {@link #getStickyEvent(Class)}.
      */
     public void postSticky(Object event) {
+        postSticky(null,event,false);
+    }
+    /**
+     * Posts the given event to the event bus and holds on to the event (because it is sticky). The most recent sticky
+     * event of an event's type is kept in memory for future access. This can be {@link #registerSticky(Object)} or
+     * {@link #getStickyEvent(Class)}.
+     */
+    public void postSticky(String tag,Object event) {
+        postSticky(tag,event,false);
+    }
+    /**
+     * Posts the given event to the event bus and holds on to the event (because it is sticky). The most recent sticky
+     * event of an event's type is kept in memory for future access. This can be {@link #registerSticky(Object)} or
+     * {@link #getStickyEvent(Class)}.
+     */
+    public void postSticky(Object event,boolean onlyLastCanReceive) {
+        postSticky(null,event,onlyLastCanReceive);
+    }
+
+    private void postSticky(String tag,Object event,boolean onlyLastCanReceive) {
         synchronized (stickyEvents) {
             stickyEvents.put(event.getClass(), event);
         }
         // Should be posted after it is putted, in case the subscriber wants to remove immediately
-        post(event);
+        post(tag,event,onlyLastCanReceive,0);
     }
 
     /**
@@ -484,7 +504,7 @@ public class EventBus {
                 invokeSubscriber(subscription, event);
                 break;
             case MainThread:
-                if(delay <= 0 ){
+                if(delay < 0 ){
                     if (isMainThread) {
                         invokeSubscriber(subscription, event);
                     } else {

@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import de.greenrobot.event.EventBus;
-import de.greenrobot.event.SubscribeTag;
+import de.greenrobot.event.Subscribe;
 
 /**
  * Created by Administrator on 2016/12/21 0021.
@@ -50,7 +50,7 @@ public class TestEventActivity extends Activity {
     public void onEventMainThread(ArrayList<TagEvent> event){
         Log.e("Event","ArrayList<TagEvent>");
     }
-    @SubscribeTag("list")
+    @Subscribe("list")
     public void onEventMainThread(List<TagEvent> event){
         Log.e("Event","List<TagEvent> ");
     }

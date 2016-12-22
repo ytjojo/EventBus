@@ -133,7 +133,7 @@ class SubscriberMethodFinder {
         }
     }
     private void checkSubscribeTag(Method method,List<SubscriberMethod> subscriberMethods,ThreadMode threadMode,Class<?> eventType){
-        SubscribeTag subscribeTag = method.getAnnotation(SubscribeTag.class);
+        Subscribe subscribeTag = method.getAnnotation(Subscribe.class);
         String tag = null;
         if(subscribeTag!=null){
            tag = subscribeTag.value();

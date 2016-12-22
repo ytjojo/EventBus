@@ -10,7 +10,7 @@ import android.view.View;
 import android.widget.TextView;
 
 import de.greenrobot.event.EventBus;
-import de.greenrobot.event.SubscribeTag;
+import de.greenrobot.event.Subscribe;
 
 /**
  * This activity gets the information from the activity before, sets up the test and starts the test. After it watchs
@@ -70,7 +70,7 @@ public class TestRunnerActivity extends Activity {
             findViewById(R.id.buttonKillProcess).setVisibility(View.VISIBLE);
         }
     }
-    @SubscribeTag("hello")
+    @Subscribe("hello")
     public void onEventMainThread(TagEvent event) {
         Log.e("Event","AAAAAAAAAAAAAAAAAAaaa");
     }
