@@ -17,6 +17,7 @@ package de.greenrobot.event;
 
 import android.os.Looper;
 import android.util.Log;
+import android.util.SparseArray;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -50,6 +51,7 @@ public class EventBus {
     private final Map<Class<?>, CopyOnWriteArrayList<Subscription>> subscriptionsByEventType;
     private final Map<Object, List<Class<?>>> typesBySubscriber;
     private final Map<Class<?>, Object> stickyEvents;
+    private SparseArray<Class<?>> stickyEventsToRemove;
 
     private final ThreadLocal<PostingThreadState> currentPostingThreadState = new ThreadLocal<PostingThreadState>() {
         @Override
@@ -226,6 +228,13 @@ public class EventBus {
             // If the subscriber is trying to abort the event, it will fail (event is not tracked in posting state)
             // --> Strange corner case, which we don't take care of here.
             postToSubscription(newSubscription, stickyEvent, Looper.getMainLooper() == Looper.myLooper(),0);
+            if(stickyEventsToRemove != null){
+                int classHashCode =stickyEvent.getClass().hashCode();
+                if(stickyEventsToRemove.get(classHashCode) !=null){
+                    stickyEventsToRemove.remove(classHashCode);
+                    removeStickyEvent(stickyEvent.getClass());
+                }
+            }
         }
     }
 
@@ -352,6 +361,20 @@ public class EventBus {
      */
     public void postSticky(Object event,boolean onlyLastCanReceive) {
         postSticky(null,event,onlyLastCanReceive);
+    }
+
+
+    public void cacheStickyPostWhenRegist(Object event,boolean autoRemoveWhenPost){
+        synchronized (stickyEvents) {
+            stickyEvents.put(event.getClass(), event);
+        }
+        if(autoRemoveWhenPost){
+            if(stickyEventsToRemove == null){
+                stickyEventsToRemove = new SparseArray<>();
+            }
+            stickyEventsToRemove.put(event.getClass().hashCode(),event.getClass());
+        }
+
     }
 
     private void postSticky(String tag,Object event,boolean onlyLastCanReceive) {

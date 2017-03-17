@@ -33,7 +33,7 @@ public class TestEventActivity extends Activity {
                 Log.e("Event","post");
                 ArrayList<TagEvent> tagEvents =new ArrayList<TagEvent>();
                 tagEvents.add(new TagEvent());
-                EventBus.getDefault().post("list",tagEvents,3000);
+                EventBus.getDefault().post("list",tagEvents);
             }
         });
         findViewById(R.id.tv_tag).setOnClickListener(new View.OnClickListener() {
